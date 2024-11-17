@@ -12,6 +12,7 @@ rcin_GetPWM(int *pwm) -> fills pwm[0..RCIN_NUM_CHANNELS-1] received PWM values, 
 #define RCIN_USE_PPM 4
 #define RCIN_USE_PWM 5
 #define RCIN_USE_DEBUG 6
+#define RCIN_USE_CUSTOM 7 //Allows the use of new control mechanisms
 
 
 #include "../interface.h"
@@ -382,6 +383,45 @@ class RcinDebug : public Rcin {
 };
 
 RcinDebug rcin_instance;
+
+//=================================================================================================
+// CUSTOM RCIN
+//=================================================================================================
+#elif RCIN_USE == RCIN_USE_CUSTOM
+
+extern void rcinCustomSetup() __attribute((weak));
+extern void rcinCustomUpdate() __attribute((weak));
+
+class RcinCustom : public Rcin {
+  public:
+    void setup() {
+      Serial.println("RCIN: RCIN_USE_CUSTOM");
+
+      if(rcinCustomSetup) {
+          Serial.println("RCIN: RCIN_USE_CUSTOM - Found rcinCustomSetup function. Firing...");
+          rcinCustomSetup();
+      } else {
+          Serial.println("ERROR! RCIN: RCIN_USE_CUSTOM - NO rcinCustomSetup() function defined!"); 
+      }
+
+      pwm = pwm_instance;
+    };
+
+    bool _update() {
+      bool rv = false;
+      if(rcinCustomUpdate) {
+        rcinCustomUpdate();
+      } else {
+        Serial.println("ERROR! RCIN: RCIN_USE_CUSTOM - NO rcinCustomUpdate() function defined!");
+      }
+
+      return rv;
+    };
+  private:
+    uint16_t pwm_instance[RCIN_NUM_CHANNELS];
+};
+
+RcinCustom rcin_instance;
 
 //=================================================================================================
 // Invalid value
